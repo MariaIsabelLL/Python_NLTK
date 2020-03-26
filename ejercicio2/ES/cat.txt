@@ -1,8 +1,0 @@
-01_es_ciencia.txt ciencia
-02_es_economia.txt economia
-03_es_internacional.txt internacional
-04_es_tecnologia.txt tecnologia
-05_es_tecnologia.txt tecnologia
-06_es_internacional.txt internacional
-07_es_internacional.txt internacional
-08_es_internacional.txt internacional
