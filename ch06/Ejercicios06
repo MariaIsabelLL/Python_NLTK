@@ -1,0 +1,147 @@
+'''
+2, Using any of the three classifiers described in this chapter,
+and any features you can think of, build the best name gender
+classifier you can. Begin by splitting the Names Corpus
+into three subsets: 500 words for the test set,
+500 words for the dev-test set,
+and the remaining 6900 words for the training set.
+Then, starting with the example name gender classifier,
+make incremental improvements. Use the dev-test set to check
+your progress. Once you are satisfied with your classifier,
+check its final performance on the test set. How does the performance
+on the test set compare to the performance on the dev-test set?
+Is this what you'd expect?'''
+
+from nltk.corpus import names
+import random
+import nltk
+import datetime
+
+
+def gender_features2(name):
+    features = {}
+    features["first_letter"] = name[0].lower()
+    features["last_letter"] = name[-1].lower()
+    return features
+
+def gender_features3(name):
+    features = {}
+    features["first_letter"] = name[0].lower()
+    features["last_letter"] = name[-1].lower()
+    features["tamano"] = len(name)
+    for letter in 'abcdefghijklmnopqrstuvwxyz':
+        features["count({})".format(letter)] = name.lower().count(letter)
+        features["has({})".format(letter)] = (letter in name.lower())
+    return features
+
+labeled_names = ([(name, 'male') for name in names.words('male.txt')] + [(name, 'female') for name in names.words('female.txt')])
+random.shuffle(labeled_names)
+
+featuresets = [(gender_features3(n), gender) for (n, gender) in labeled_names]
+train_set, test_set , devtest_set = featuresets[1000:], featuresets[:500], featuresets[500:1000]
+
+c1 = nltk.NaiveBayesClassifier.train(train_set)
+
+print('accuracy',nltk.classify.accuracy(c1,  devtest_set))
+print(c1.show_most_informative_features(5))
+
+errors = []
+list1= []
+list2= []
+for (fset,  cat) in devtest_set:
+     guess = c1.classify(fset)
+     list1.append(guess)
+     list2.append(cat)
+     if guess != cat:
+         errors.append((guess, cat, fset))
+         #errors.append((guess, cat))
+
+#print('errores: ',errors)
+
+mat  = nltk.ConfusionMatrix(list1,  list2)
+print(mat.pretty_format(sort_by_count=True,show_percents=True,  truncate=9))
+
+# Test Final
+print('accuracy',nltk.classify.accuracy(c1,  test_set))
+print(c1.show_most_informative_features(5))
+
+
+'''
+4.Using the movie review document classifier discussed in this chapter,
+generate a list of the 30 features that the classifier finds to be most
+informative. Can you explain why these particular features are informative?
+Do you find any of them surprising?
+'''
+
+from nltk.corpus import movie_reviews
+stopwords = nltk.corpus.stopwords.words('english')
+
+documents = [(list(movie_reviews.words(fileid)), category)
+              for category in movie_reviews.categories()
+              for fileid in movie_reviews.fileids(category)]
+random.shuffle(documents)
+
+all_words = nltk.FreqDist(w.lower() for w in movie_reviews.words() if w not in stopwords)
+word_features = list(all_words)[:2000]
+
+def document_features(document): 
+    document_words = set(document) 
+    features = {}
+    for word in word_features:
+        features['contains({})'.format(word)] = (word in document_words)
+    return features
+
+featuresets = [(document_features(d), c) for (d,c) in documents]
+train_set, test_set = featuresets[100:], featuresets[:100]
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+print(nltk.classify.accuracy(classifier, test_set))
+print(classifier.show_most_informative_features(30))
+
+
+'''
+5.Select one of the classification tasks described in this chapter,
+such as name gender detection, document classification,
+part-of-speech tagging, or dialog act classification.
+Using the same training and test data, and the same feature extractor,
+build three classifiers for the task: a decision tree,
+a naive Bayes classifier, and a Maximum Entropy classifier.
+Compare the performance of the three classifiers on your selected task.
+How do you think that your results might be different if you used
+a different feature extractor?'''
+
+posts = nltk.corpus.nps_chat.xml_posts()[:10000]
+
+def dialogue_act_features(post):
+     features = {}
+     features2 = []
+     for word in nltk.word_tokenize(post):
+         features['contains({})'.format(word.lower())] = True
+         features2.extend(word.lower())
+     return features
+
+featuresets = [(dialogue_act_features(post.text), post.get('class'))
+                for post in posts]
+size = int(len(featuresets) * 0.1)
+train_set, test_set = featuresets[size:], featuresets[:size]
+
+'''NaiveBayesClassifier'''
+print(str(datetime.datetime.now()))
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+print(str(datetime.datetime.now()))
+print('NaiveBayesClassifier',nltk.classify.accuracy(classifier, test_set))
+
+'''Decision Tree classifier'''
+print(str(datetime.datetime.now()))
+classifier2 = nltk.classify.DecisionTreeClassifier.train(
+            train_set, entropy_cutoff=0,support_cutoff=0)
+print(str(datetime.datetime.now()))
+print('Decision Tree classifier',nltk.classify.accuracy(classifier2, test_set))
+
+'''Maximum Entropy classifier'''
+algorithm = 'GIS' #nltk.classify.MaxentClassifier.ALGORITHMS[0]
+print(str(datetime.datetime.now()))
+classifier3 = nltk.classify.MaxentClassifier.train(
+            train_set, algorithm, trace=0, max_iter=1000)
+print(str(datetime.datetime.now()))
+print('Maximum Entropy classifier',nltk.classify.accuracy(classifier3, test_set))
+print(str(datetime.datetime.now()))
